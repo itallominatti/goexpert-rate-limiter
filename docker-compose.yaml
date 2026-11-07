@@ -1,0 +1,46 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    # O compose lê o .env da raiz para interpolar estes valores; variáveis do
+    # shell têm prioridade (ex.: RATE_LIMIT_BLOCK_DURATION=10s docker compose up).
+    environment:
+      RATE_LIMIT_IP: ${RATE_LIMIT_IP:-10}
+      RATE_LIMIT_TOKENS: ${RATE_LIMIT_TOKENS:-}
+      RATE_LIMIT_BLOCK_DURATION: ${RATE_LIMIT_BLOCK_DURATION:-5m}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1s}
+      RATE_LIMIT_STORE: ${RATE_LIMIT_STORE:-redis}
+      RATE_LIMIT_TRUSTED_PROXIES: ${RATE_LIMIT_TRUSTED_PROXIES:-}
+      RATE_LIMIT_FAIL_OPEN: ${RATE_LIMIT_FAIL_OPEN:-false}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      # Dentro do compose o Redis é sempre o serviço "redis".
+      REDIS_ADDR: redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # Testes unitários + integração contra o Redis acima:
+  #   docker compose run --rm --build test
+  test:
+    build:
+      context: .
+      target: test
+    profiles: ["test"]
+    environment:
+      REDIS_ADDR: redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy

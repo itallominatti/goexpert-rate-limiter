@@ -1,0 +1,4 @@
+*.exe
+/bin/
+coverage.out
+.env.local

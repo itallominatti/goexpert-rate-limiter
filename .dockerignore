@@ -1,0 +1,8 @@
+.git
+.env
+.env.local
+*.md
+.gitignore
+docker-compose.yaml
+coverage.out
+scripts
